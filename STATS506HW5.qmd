@@ -1,0 +1,16 @@
+---
+title:  "STATS 506 HW 5"
+author: "ZHAO Shengchun"
+format: pdf
+editor: visual
+---
+
+## Github URL:
+
+[https://github.com/ZHAOShengchun67734538](https://github.com/ZHAOShengchun67734538/STAT-506-HW-4){.uri}
+
+## Question 1
+
+## Question 2
+
+## Question 3
