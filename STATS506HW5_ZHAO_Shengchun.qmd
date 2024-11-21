@@ -1,0 +1,516 @@
+---
+title:  "STATS 506 HW 5"
+author: "ZHAO Shengchun"
+format:
+  html:
+    self-contained: true
+editor: visual
+---
+
+## Github URL:
+
+<https://github.com/ZHAOShengchun67734538/STAT-506-HW-5>
+
+## Question 1
+
+**(a)**
+
+```{r}
+library(Rcpp)
+cppFunction("
+int C_gcd(int x, int y) {
+ return  std::gcd(x, y);
+}
+")
+
+cppFunction("
+     int C_lcm(int x, int y) {
+  return (abs(x*y) / std::gcd(x, y));
+}       
+")
+```
+
+```{r}
+#| warning: true
+#| error: true
+### Class ###
+setClass("Rational",
+         slots = c(numerator = "numeric", 
+                   denominator = "numeric"))
+
+
+### Validity ###
+setValidity("Rational", function(object) {
+  if (object@denominator == 0) 
+  {
+    return(stop("Denominator cannot be zero."))
+  }
+  TRUE
+})
+```
+
+```{r}
+#| warning: true
+#| error: true
+### Constructor ###
+#' Class Rational Constructor
+#'
+#' @param numerator (must be integer) 
+#' @param denominator (must be integer)
+#'
+#' @return new object of class Rational
+Rational <- function(numerator, denominator) 
+{
+  if(!is.numeric(numerator))
+  {
+    stop("Numerator must be a numeric.")
+  }
+  if(!is.numeric(denominator))
+  {
+    stop("Denominator must be a numeric.")
+  }
+  if(numerator != as.integer(numerator))
+  {
+    stop("Numerator must be an integer")
+  }
+  if(denominator != as.integer(denominator))
+  {
+    stop("Denominator must an integer")
+  }
+  new("Rational", numerator=as.integer(numerator), 
+                  denominator=as.integer(denominator))
+}
+```
+
+```{r}
+### Show Method ###
+setMethod("show", "Rational", function(object) {
+  cat("The rational number is",object@numerator,
+      "/",object@denominator,"\n")
+})
+```
+
+```{r}
+#| warning: true
+#| error: true
+### Simplify Method ###
+setGeneric("simplify", 
+           function(object){
+             standardGeneric("simplify")
+          })
+setMethod("simplify", "Rational", function(object) {
+  # We guarantee the divisor is positive
+  divisor = C_gcd(abs(object@numerator), abs(object@denominator))
+  object@numerator = as.integer(object@numerator / divisor)
+  object@denominator = as.integer(object@denominator / divisor)
+  return(object)
+})
+```
+
+```{r}
+#| warning: true
+#| error: true
+### Quotient Method ###
+setGeneric("quotient", 
+           function(object, digits = 15){
+             standardGeneric("quotient")
+          })
+
+
+setMethod("quotient", "Rational", function(object, digits = 15) {
+  # Check whether the input digits is a valid integer.
+  if(!is.numeric(digits))
+  {
+    stop("The digits must be a numeric.")
+  }
+  if(abs(digits) != digits)
+  {
+    stop("The digits must be a positive number.")
+  }
+  if(digits != as.integer(digits))
+  {
+    stop("The digits must be an integer.")
+  }
+  result = as.numeric(object@numerator) / as.numeric(object@denominator)
+  print(result, digits = digits)
+  invisible(result)
+})
+```
+
+```{r}
+#| warning: true
+#| error: true
+### Arithmetic Methods ###
+# Define "+"
+setMethod("+", 
+          signature(e1 = "Rational", e2 = "Rational"), 
+          function(e1, e2) {
+            common_denom = C_lcm(e1@denominator, e2@denominator)
+            new_numerator = (e1@numerator*(common_denom / e1@denominator)) +
+                        (e2@numerator*(common_denom / e2@denominator))
+            new_numerator = as.integer(new_numerator)
+            common_denom = as.integer(common_denom)
+            result = new("Rational", 
+                         numerator = new_numerator, 
+                         denominator = common_denom)
+          })
+
+# Define "-"
+setMethod("-", 
+          signature(e1 = "Rational", e2 = "Rational"),
+          function(e1, e2) {
+            common_denom = C_lcm(e1@denominator, e2@denominator)
+            new_numerator = (e1@numerator*(common_denom / e1@denominator)) -
+                        (e2@numerator*(common_denom / e2@denominator))
+            new_numerator = as.integer(new_numerator)
+            common_denom = as.integer(common_denom)
+            result <- new("Rational", 
+                          numerator = new_numerator, 
+                          denominator = common_denom)
+})
+
+# Define "*"
+setMethod("*",
+          signature(e1 = "Rational", e2 = "Rational"),
+          function(e1, e2) {
+            new_numerator = e1@numerator * e2@numerator
+            new_denominator = e1@denominator * e2@denominator
+            result = new("Rational", 
+                         numerator = new_numerator, 
+                         denominator = new_denominator)
+})
+
+# Define "/"
+setMethod("/",
+          signature(e1 = "Rational", e2 = "Rational"),
+          function(e1, e2) {
+            new_numerator = e1@numerator * e2@denominator
+            new_denominator = e1@denominator * e2@numerator
+            if (new_denominator == 0)
+            { 
+              stop("Division by zero, denominator cannot be zero.")
+            }
+            result = new("Rational", 
+                          numerator = new_numerator, 
+                          denominator = new_denominator)
+})
+```
+
+**(b)**
+
+```{r}
+# Construct three object
+r1 = Rational(24,6)
+r2 = Rational(7,230)
+r3 = Rational(0,4)
+```
+
+```{r}
+#| warning: true
+#| error: true
+# Test Examples
+r1
+r3
+```
+
+```{r}
+#| warning: true
+#| error: true
+# Test Examples
+r1 + r2
+r1 - r2
+r1 * r2
+r1 / r2
+r1 + r3
+r1 * r3
+```
+
+```{r}
+#| warning: true
+#| error: true
+r2 / r3
+```
+
+```{r}
+#| warning: true
+#| error: true
+# Test Examples
+quotient(r1)
+quotient(r2)
+quotient(r2, digits = 3)
+```
+
+```{r}
+#| warning: true
+#| error: true
+quotient(r2, digits = 3.14)
+```
+
+```{r}
+#| warning: true
+#| error: true
+quotient(r2, digits = "avocado")
+```
+
+```{r}
+q2 <- quotient(r2, digits = 3)
+q2
+quotient(r3)
+```
+
+```{r}
+#| warning: true
+#| error: true
+# Test Examples
+simplify(r1)
+simplify(r2)
+simplify(r3)
+```
+
+**(c)**
+
+```{r}
+#| warning: true
+#| error: true
+r4 = Rational(8,0)
+r5 = Rational("sa",6)
+r6 = Rational(32,"543")
+r7 = Rational(6.666,77)
+r8 = Rational(31.00,78.66)
+```
+
+```{r}
+r9 = Rational(-33.000,87)
+r9
+quotient(r9)
+simplify(r9)
+```
+
+## Question 2
+
+**(a)**
+
+```{r}
+### (a) ###
+library(plotly)
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+# Data import and combine Genre__ columns
+art = read.csv("C:/Users/z1883/Desktop/df_for_ml_improved_new_market.csv")
+unique(art[, grep("^Genre", names(art))])
+art$Genre___Others[art$Genre___Painting == 1] <- 0
+unique(art[, grep("^Genre", names(art))])
+art$genre <- "Photography"
+art$genre[art$Genre___Print == 1] <- "Print"
+art$genre[art$Genre___Sculpture == 1] <- "Sculpture"
+art$genre[art$Genre___Painting == 1] <- "Painting"
+art$genre[art$Genre___Others == 1] <- "Other"
+table(art$genre)
+
+(yeargenre <- with(art, table(year, genre)))
+ygperc = yeargenre/apply(yeargenre, 1, sum)
+ygperc = ygperc[, c("Painting", "Sculpture", "Photography", "Print", "Other")]
+y = as.data.frame(ygperc)
+
+plot_ly(y,x=~Freq,y=~year,color=~genre,type='bar') %>%
+  layout(barmode = 'stack',
+         title = "Proportion of Genre of Art Sales",
+         yaxis = list(autotypenumbers = 'strict',title = "Year"),
+         xaxis = list(title = "Percentage"),
+         legend = list(title = list(text = 'Genre')))
+
+
+```
+
+**(b)**
+
+In this question, I re-plot the plots that I made in HW4, but in HW4, I did not handle the case that Genre_Others = 1 AND Genre_Painting = 1, so, in this question, I cleaned the data set as same as the professor did in the HW4 Solution, so, if you go to the my HW4 in Github to see the pictures:
+
+<https://github.com/ZHAOShengchun67734538/STAT-506-HW-4/blob/main/STATS506HW4.pdf>
+
+The line of Genre_Others will be a little different, but the other lines should be the same.
+
+```{r}
+### (b) ###
+# Let's start from the beginning.
+art = read.csv("C:/Users/z1883/Desktop/df_for_ml_improved_new_market.csv")
+unique(art[, grep("^Genre", names(art))])
+art$Genre___Others[art$Genre___Painting == 1] <- 0
+
+
+yearly.summary = art %>%
+  group_by(year) %>%
+  summarize(
+    ave.price.year = mean(price_usd, na.rm = TRUE),
+    median.price.year = median(price_usd, na.rm = TRUE),
+    sd.price.year = sd(price_usd, na.rm = TRUE)
+  ) %>% 
+  ungroup()
+
+
+colnames(art)[102] = "Photography"
+colnames(art)[103] = "Print"
+colnames(art)[104] = "Sculpture"
+colnames(art)[105] = "Painting"
+colnames(art)[106] = "Others"
+
+# We combine the five binary variables into one column
+art.long = art %>%
+  pivot_longer(
+    cols = c("Photography","Print",
+             "Sculpture","Painting",
+             "Others"), 
+    names_to = "Genre", 
+    values_to = "Is_Genre"
+  ) %>%
+  # Keep only rows where the genre is present
+  filter(Is_Genre == 1) %>% 
+  # Remove the binary indicator column
+  select(-Is_Genre)
+genre.price <- art.long %>%
+  group_by(year, Genre) %>%
+  summarize(ave.price.genre = mean(price_usd, na.rm = TRUE), .groups = "drop")
+```
+
+```{r}
+library(plotly)
+library(dplyr)
+library(ggplot2)
+
+p <- plot_ly() %>%
+  # Add lines for yearly summary statistics
+  add_lines(data=yearly.summary,x = ~year,y = ~ave.price.year, 
+            type = 'scatter', 
+            #marker = list(size = 8), 
+            line = list(color = "lightblue", width = 2),
+            name = "Average Price (Overall)",
+            mode = 'lines'
+  ) %>%
+  add_lines(data=yearly.summary,x = ~year,y = ~median.price.year, 
+            type = 'scatter', 
+            #marker = list(size = 8),
+            line = list(color = "red", width = 2),
+            name = "Median Price (Overall)",
+            mode = 'lines', 
+  ) %>%
+  add_lines(data=yearly.summary,x = ~year,y = ~sd.price.year, 
+            type = 'scatter', 
+            #marker = list(size = 8),
+            line = list(color = "orange", width = 2),
+            name = "Standard Deviation (Overall)",
+            mode = 'lines', 
+  ) %>%
+  # Add markers for genre-specific average prices
+  add_lines(
+    data = genre.price,
+    x = ~year,
+    y = ~ave.price.genre,
+    color = ~Genre,
+    name = ~paste("Genre:", Genre),
+    type = 'scatter',
+    line = list(width = 2),
+    # marker = list(size = 8),   
+    mode = 'lines',
+    visible = FALSE) %>%
+  # Layout adjustments
+  layout(
+    title = list(
+      text = "Changes in Art Sales Price",
+      font = list(size = 16, face = "bold")
+    ),
+    xaxis = list(
+      title = "Year",
+      titlefont = list(size = 14)
+    ),
+    yaxis = list(
+      title = "Sales Price (USD)",
+      titlefont = list(size = 14)
+    ),
+    legend = list(
+      title = list(text = "Legend"),
+      orientation = "h",
+      x = 0.5,
+      xanchor = "center",
+      y = -0.2
+    ),
+    margin = list(t = 50, b = 100)
+  )
+
+p |> layout(updatemenus = list(
+  list(
+    y = 1,
+    buttons = list(
+      list(method = "update",
+           args = list(list(visible =  list(TRUE,TRUE,TRUE,FALSE,
+                                            FALSE,FALSE,FALSE,FALSE)),
+                       list(yaxis = list(title = "Sales Price (USD)"))),
+           label = "Year"),
+      
+      list(method = "update",
+           args = list(list(visible =  list(FALSE,FALSE,FALSE,TRUE,
+                                            TRUE,TRUE,TRUE,TRUE)),
+                       list(yaxis = list(title = "Sales Price (USD)"))),
+           label = "Genre"))
+  )
+))
+```
+
+## Question 3
+
+**(a)**
+
+```{r}
+### (a) ###
+library(data.table)
+library(nycflights13)
+
+# Departure Delay Table
+flights = data.table(nycflights13::flights)
+airports = data.table(nycflights13::airports)
+merge(flights[, faa := origin],
+                airports,
+                by = "faa",
+                all.x = TRUE) |>
+  _[, .(N = .N,
+           mean_dep = mean(dep_delay, na.rm = TRUE),
+           median_dep = median(dep_delay, na.rm = TRUE)),
+       by = name] |>
+  _[N >= 10, !"N"] |>
+  _[order(mean_dep, decreasing = TRUE)]
+
+
+# Arrival Delay Table
+flights = data.table(nycflights13::flights)
+airports = data.table(nycflights13::airports)
+merge(flights[, faa := dest],
+                airports,
+                by = "faa",
+                all.x = TRUE) |>
+  _[, .(name = ifelse(is.na(first(name)), first(faa), first(name)),
+           N = .N,
+           mean_arr = mean(arr_delay, na.rm = TRUE),
+           median_arr = median(arr_delay, na.rm = TRUE)),
+       by = faa] |>
+  _[N >= 10, !c("faa", "N")] |>
+  _[order(mean_arr, decreasing = TRUE)] |>
+  print(x = _, nrows = 1000)
+```
+
+**(b)**
+
+```{r}
+### (b) ###
+flights = data.table(nycflights13::flights)
+planes = data.table(nycflights13::planes)
+merge(flights,
+      planes,
+      by = "tailnum",
+      all.x = TRUE) |>
+  _[, `:=`(num = .N,
+           ave_mph = mean(distance/(air_time/60), na.rm = TRUE)),
+            by = model] |>
+  _[, c("model", "ave_mph", "num")] |>
+  _[order(ave_mph, decreasing = TRUE)] |>
+  _[1,]
+```
